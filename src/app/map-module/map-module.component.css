@@ -3,14 +3,47 @@
   width: 700px;
 }
 .my-chart{
-  height: 700px;
-  width: 700px;
+  height: 400px;
+  width: 400px;
 
 }
 .chart-container{
-  height: 700px;
-  width: 700px;
+  height: 400px;
+  width: 400px;
   position: absolute;
-  right: 0;
+  right: 170px;
+  top: 400px;
+}
+.chart-container .my-chart canvas{
+  height: 400px;
+  width: 400px;
+}
+.tab{
+  position: absolute;
+  right: 750px;
   top: 0;
 }
+.stateTable{
+  position: absolute;
+  right: 205px;
+  top: 200px;
+  width: 450px;
+
+}
+.drop-down{
+  display: block;
+  position: absolute;
+  right: 370px;
+  top: 60px;
+}
+.apply-btn{
+  position: absolute;
+  top: 35px;
+  right: 136px;
+}
+.cancel-btn{
+  position: absolute;
+  top: 35px;
+  right: 28px;
+}
+

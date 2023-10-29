@@ -2,7 +2,70 @@
 <div class="chart-container">
   <div id="chart" class="my-chart"></div>
 </div>
-<tabset  type="pills">
-  <tab heading="Vertical 1">Vertical content 1</tab>
-  <tab heading="Vertical 2">Vertical content 2</tab>
-</tabset>
+<!-- <tabset class="tab" [vertical]="false">
+  <tab heading="1">
+    <div class="chart-container">
+      <div id="chart" class="my-chart"></div>
+    </div>
+  </tab>
+  <tab heading="2">Second Tab</tab>
+</tabset> -->
+<div class="stateTable" *ngIf="showCountryTable ">
+  <table class="table">
+    <thead>
+    <tr>
+      <th class="col" colspan="3">{{chartHeader}}</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Population</td>
+      <td>Population (sq/km)</td>
+      <td>Area (sq/km)</td>
+    </tr>
+    <tr >
+      <td>{{countryTableData.totalPopulation}}</td>
+      <td>{{countryTableData.populationPerSqKm}}</td>
+      <td>{{countryTableData.totalArea}}</td>
+    </tr>
+  </tbody>
+  </table>
+
+</div>
+<div class="stateTable" *ngIf="showStateTable">
+  <table class="table table-bordered">
+    <tr>
+      <th class="col" colspan="5">{{chartHeader}}</th>
+    </tr>
+    <tr>
+      <td>Male</td>
+      <td>Female</td>
+      <td>Employed</td>
+      <td>Unemployed</td>
+      <td>Families</td>
+    </tr>
+    <tr>
+      <td>{{stateTableData.male}}</td>
+      <td>{{stateTableData.female}}</td>
+      <td>{{stateTableData.employed}}</td>
+      <td>{{stateTableData.unemployed}}</td>
+      <td>{{stateTableData.families}}</td>
+    </tr>
+  </table>
+
+</div>
+<div class="drop-down">
+  From <select name="" id="min" [(ngModel)]="minValue" >
+    <option value="1000000"> 1000000</option>
+    <option value="2000000">2000000 </option>
+    <option value="3000000">3000000</option>
+  </select>
+
+  To <select name="" id="max" [(ngModel)]="maxValue" >
+    <option value="4000000"> 4000000</option>
+    <option value="5000000">5000000 </option>
+    <option value="6000000">6000000</option>
+  </select>
+  <button class="apply-btn btn btn-success" (click)="applyFilter()">Apply</button>
+  <button class="cancel-btn btn btn-warning" (click)="clearFilter()">Clear Filter</button>
+</div>

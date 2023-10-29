@@ -1,21 +1,20 @@
-import { AfterViewInit, Component, OnInit } from '@angular/core';
-import { Map, View } from 'ol';
-import TileLayer from 'ol/layer/Tile';
-import { fromLonLat, transformExtent } from 'ol/proj';
-import OSM from 'ol/source/OSM';
-import { ZoomSlider } from 'ol/control'
-import { Tile, Vector } from 'ol/layer';
-import VectorImageLayer from 'ol/layer/VectorImage';
-import Text from 'ol/style/Text';
-import { Vector as vectorSource } from 'ol/source';
-import { TileWMS } from 'ol/source'
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import GeoJSON from 'ol/format/GeoJSON';
-import Feature from 'ol/Feature';
+import { AfterViewInit, Component, OnInit } from '@angular/core';
 import * as echarts from 'echarts';
-import { ChartSeries } from './map-module.model';
-import Style from 'ol/style/Style';
+import { Map, View } from 'ol';
+import { ZoomSlider } from 'ol/control';
+import GeoJSON from 'ol/format/GeoJSON';
+import { Tile } from 'ol/layer';
+import TileLayer from 'ol/layer/Tile';
+import VectorImageLayer from 'ol/layer/VectorImage';
+import { fromLonLat } from 'ol/proj';
+import { TileWMS, Vector as vectorSource } from 'ol/source';
+import OSM from 'ol/source/OSM';
+import Fill from 'ol/style/Fill';
 import Stroke from 'ol/style/Stroke';
+import Style from 'ol/style/Style';
+import Text from 'ol/style/Text';
+import { ChartSeries, CountryTableModel, StateTableModal } from './map-module.model';
 @Component({
     selector: 'app-map-module',
     templateUrl: './map-module.component.html',
@@ -34,6 +33,7 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
     public vectorLayerCountry: any;
     public chart: any = {};
     public chartData: Array<ChartSeries> = new Array<ChartSeries>();
+    public chartHeader: string = ''
     public dataModel = [{
         label: 'Male',
         prop: 'MALE'
@@ -70,16 +70,25 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
         prop: 'PERSONS'
     }
     ]
+    stateTableData: StateTableModal = new StateTableModal()
+    countryTableData: CountryTableModel = new CountryTableModel();
+    showCountryTable: boolean = false;
+    showStateTable: boolean = false;
+    public minValue: string = ''
+    public maxValue: string = ''
+    public filterString: string = ''
     ngOnInit() {
         this.initMap()
         this.onMapClick();
+        // this.onPointerMove();
+        this.onZoomChange();
     }
     initMap() {
         this.map = new Map({
             target: 'map',
             view: new View({
                 projection: 'EPSG:3857',
-                zoom: 5,
+                zoom: 2,
                 center: fromLonLat([-73.4829, 40.84082]),
                 // extent: transformExtent([68.1766451354, 7.96553477623, 97.4025614766, 35.4940095078], "EPSG:4326", "EPSG:3857")
 
@@ -112,7 +121,15 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
         this.map.addLayer(this.rasterLayer)
     }
     onMapClick() {
+        var _feature;
         this.map.on('singleclick', (e) => {
+            if (_feature) {
+                _feature.setStyle(undefined);
+                _feature = undefined;
+            }
+            var highLight = new Style({
+                stroke: new Stroke({ color: 'white', width: 2 })
+            })
             this.initChart()
             console.log('click');
 
@@ -122,16 +139,39 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
                 'INFO_FORMAT': 'application/json'
             }
             this.map.forEachFeatureAtPixel(e.pixel, (feature: any, layer: any) => {
-                console.log(feature);
-                if (feature instanceof Feature) {
+
+                let featureProp: any = feature.getProperties();
+                if (layer.get('name') == 'USCountry') {
+                    this.showCountryTable = true;
+                    this.showStateTable = false;
                     this.chartData = [];
-                    let featureProp: any = feature.getProperties();
+                    this.chartData.push({ name: 'Population', value: featureProp['POP2000'] });
+                    this.chartHeader = featureProp['NAME_ENGLI']
+                    feature.setStyle(this.addStyle(feature, 'NAME_ENGLI', 'red', 'rgba(175, 209, 237,0.4)'))
+                    this.countryTableData.populationPerSqKm = featureProp['POPSQKM']
+                    this.countryTableData.totalArea = featureProp['SQKM']
+                    this.countryTableData.totalPopulation = featureProp['POP2000']
+                }
+                else if (layer.get('name') == 'USStates') {
+                    this.showCountryTable = false;
+                    this.showStateTable = true;
+                    this.chartData = [];
                     this.dataModel.forEach((model) => {
                         this.chartData.push({ name: model.label, value: featureProp[model.prop] })
-                    })
-                    this.initChart();
+                    });
+                    feature.setStyle(this.addStyle(feature, 'STATE_NAME', 'red', 'rgba(175, 209, 237,0.4)'));
+                    this.chartHeader = featureProp['STATE_NAME'];
+                    this.stateTableData.male = featureProp['MALE']
+                    this.stateTableData.female = featureProp['FEMALE']
+                    this.stateTableData.employed = featureProp['EMPLOYED']
+                    this.stateTableData.unemployed = featureProp['UNEMPLOY']
+                    this.stateTableData.families = featureProp['FAMILIES']
+
 
                 }
+
+                _feature = feature;
+                this.initChart();
 
             })
             this.map.forEachLayerAtPixel(e.pixel, (layer) => {
@@ -156,12 +196,17 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
         this.vectorLayer = new VectorImageLayer({
             zIndex: 2,
             source: new vectorSource({
-                url: 'http://localhost:9004/geoserver/topp/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=topp:states&maxFeatures=50&outputFormat=application/json',
-                format: new GeoJSON()
+                url: 'http://localhost:9004/geoserver/topp/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=topp:states&outputFormat=application/json',
+                format: new GeoJSON(),
+
             }),
+            style: (feature) => {
+                return this.addStyle(feature, 'STATE_NAME', 'black')
+            }
 
         });
-        // this.map.addLayer(this.vectorLayer)
+        this.vectorLayer.set('name', 'USStates')
+        this.map.addLayer(this.vectorLayer)
         this.vectorLayerCountry = new VectorImageLayer({
             zIndex: 1,
             source: new vectorSource({
@@ -169,15 +214,10 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
                 format: new GeoJSON(),
             }),
             style: (feature) => {
-                return new Style({
-                    stroke: new Stroke({ color: 'black', width: 3 }),
-                    text: new Text({
-                        font: 'bold 20px "Fira Sans"',
-                        text: feature.getProperties()['NAME_ENGLI'].toString()
-                    })
-                })
-            }
+                return this.addStyle(feature, 'NAME_ENGLI', 'black')
+            },
         });
+        this.vectorLayerCountry.set('name', 'USCountry')
         this.map.addLayer(this.vectorLayerCountry)
     }
     initChart() {
@@ -185,8 +225,8 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
         this.chart = echarts.init(chartEle);
         const option = {
             title: {
-                text: 'Referer of a Website',
-                subtext: 'Fake Data',
+                text: this.chartHeader,
+                // subtext: 'Fake Data',
                 left: 'center'
             },
             tooltip: {
@@ -221,5 +261,75 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
         };
         this.chart.setOption(option)
     }
+    onPointerMove() {
+        var highLight = new Style({
+            stroke: new Stroke({ color: 'white', width: 2 })
+        })
+        var _feature: any;
+        this.map.on('pointermove', e => {
+            if (_feature) {
+                console.log('no feature');
+                _feature = undefined
+
+            }
+            this.map.forEachFeatureAtPixel(e.pixel, (feature: any) => {
+                _feature = feature
+                _feature.setStyle(highLight);
+                if (!feature) {
+                    console.log('no feature');
+
+                }
+                else {
+                    console.log('yes feature');
+
+                }
+            })
+
+        })
+    }
+    onZoomChange() {
+        this.map.on('moveend', e => {
+            console.log(this.map.getView().getZoom());
+
+            if (this.map.getView().getZoom() >= 3) {
+                this.vectorLayer.setVisible(true)
+                this.vectorLayerCountry.setVisible(false)
+                this.showCountryTable = false;
+                this.showStateTable = true;
+            }
+            else {
+                this.vectorLayer.setVisible(false)
+                this.vectorLayerCountry.setVisible(true)
+                this.showCountryTable = true;
+                this.showStateTable = false;
+            }
+        })
+    }
+    addStyle(feature, textProp, strokeColor, fillColor = 'rgba(176, 186, 194,0.4)') {
+        return new Style({
+            stroke: new Stroke({ color: strokeColor, width: 3 }),
+            fill: new Fill({ color: fillColor }),
+            text: new Text({
+                font: 'bold 20px "Fira Sans"',
+                text: feature.getProperties()[textProp].toString()
+            })
+        })
+    }
+    applyFilter() {
+        if (this.minValue && this.maxValue) {
+            this.filterString = "PERSONS>'" + this.minValue + "' and PERSONS<'" + this.maxValue + "'";
+            let url = "http://localhost:9004/geoserver/topp/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=topp:states&PROPERTY_NAME=(PERSONS)&CQL_FILTER=" + this.filterString + "&outputFormat=application/json"
+            this.vectorLayer.getSource().setUrl(url);
+            this.vectorLayer.getSource().refresh();
+            console.log(this.filterString);
+        }
+    }
+    clearFilter(){
+        let url = "http://localhost:9004/geoserver/topp/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=topp:states&PROPERTY_NAME=(PERSONS)&outputFormat=application/json"
+        this.vectorLayer.getSource().setUrl(url);
+        this.vectorLayer.getSource().refresh();
+
+    }
+
 
 }
