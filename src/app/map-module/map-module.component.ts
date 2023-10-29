@@ -1,5 +1,5 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { AfterViewInit, Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import * as echarts from 'echarts';
 import { Map, View } from 'ol';
 import { ZoomSlider } from 'ol/control';
@@ -20,12 +20,9 @@ import { ChartSeries, CountryTableModel, StateTableModal } from './map-module.mo
     templateUrl: './map-module.component.html',
     styleUrls: ['./map-module.component.css']
 })
-export class MapModuleComponent implements OnInit, AfterViewInit {
+export class MapModuleComponent implements OnInit {
 
     constructor(private http: HttpClient) { }
-    ngAfterViewInit(): void {
-
-    }
     public map!: Map;
     public rasterLayer: any;
     public rasterSource: any;
@@ -127,12 +124,7 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
                 _feature.setStyle(undefined);
                 _feature = undefined;
             }
-            var highLight = new Style({
-                stroke: new Stroke({ color: 'white', width: 2 })
-            })
             this.initChart()
-            console.log('click');
-
             let resolution = this.map.getView().getResolution();
             let proj = 'EPSG:3857';
             let format = {
@@ -147,7 +139,7 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
                     this.chartData = [];
                     this.chartData.push({ name: 'Population', value: featureProp['POP2000'] });
                     this.chartHeader = featureProp['NAME_ENGLI']
-                    feature.setStyle(this.addStyle(feature, 'NAME_ENGLI', 'red', 'rgba(175, 209, 237,0.4)'))
+                    feature.setStyle(this.addStyle(feature, 'NAME_ENGLI', 'black', 'rgba(100, 217, 168,0.4)'))
                     this.countryTableData.populationPerSqKm = featureProp['POPSQKM']
                     this.countryTableData.totalArea = featureProp['SQKM']
                     this.countryTableData.totalPopulation = featureProp['POP2000']
@@ -159,7 +151,7 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
                     this.dataModel.forEach((model) => {
                         this.chartData.push({ name: model.label, value: featureProp[model.prop] })
                     });
-                    feature.setStyle(this.addStyle(feature, 'STATE_NAME', 'red', 'rgba(175, 209, 237,0.4)'));
+                    feature.setStyle(this.addStyle(feature, 'STATE_NAME', 'black', 'rgba(100, 217, 168,0.4)'));
                     this.chartHeader = featureProp['STATE_NAME'];
                     this.stateTableData.male = featureProp['MALE']
                     this.stateTableData.female = featureProp['FEMALE']
@@ -177,14 +169,11 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
             this.map.forEachLayerAtPixel(e.pixel, (layer) => {
                 if (layer && layer.get('layerName') == 'rasterLayer') {
                     let featureURL = this.rasterLayer.getSource().getFeatureInfoUrl(e.coordinate, resolution, proj, format);
-                    console.log(featureURL);
                     let _headers = new HttpHeaders();
                     _headers.set('Access-Control-Allow-Origin', 'http://localhost:4200')
                     this.http.get(featureURL, {
                         headers: _headers
                     }).subscribe((response) => {
-                        console.log(response);
-
                     })
                 }
 
@@ -268,29 +257,17 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
         var _feature: any;
         this.map.on('pointermove', e => {
             if (_feature) {
-                console.log('no feature');
                 _feature = undefined
-
             }
             this.map.forEachFeatureAtPixel(e.pixel, (feature: any) => {
                 _feature = feature
                 _feature.setStyle(highLight);
-                if (!feature) {
-                    console.log('no feature');
-
-                }
-                else {
-                    console.log('yes feature');
-
-                }
             })
 
         })
     }
     onZoomChange() {
         this.map.on('moveend', e => {
-            console.log(this.map.getView().getZoom());
-
             if (this.map.getView().getZoom() >= 3) {
                 this.vectorLayer.setVisible(true)
                 this.vectorLayerCountry.setVisible(false)
@@ -321,13 +298,14 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
             let url = "http://localhost:9004/geoserver/topp/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=topp:states&PROPERTY_NAME=(PERSONS)&CQL_FILTER=" + this.filterString + "&outputFormat=application/json"
             this.vectorLayer.getSource().setUrl(url);
             this.vectorLayer.getSource().refresh();
-            console.log(this.filterString);
         }
     }
     clearFilter(){
         let url = "http://localhost:9004/geoserver/topp/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=topp:states&PROPERTY_NAME=(PERSONS)&outputFormat=application/json"
         this.vectorLayer.getSource().setUrl(url);
         this.vectorLayer.getSource().refresh();
+        this.minValue = '';
+        this.maxValue = '';
 
     }
 
