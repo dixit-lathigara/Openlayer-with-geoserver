@@ -1,3 +1,9 @@
+# Installation Steps
+
+- Download this project and extract all the files to a specific folder.
+- This project uses angular version16.2.11.
+- After extracting files, open cmd and run npm install to install all required dependencies.
+
 # Project
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 15.0.5.
