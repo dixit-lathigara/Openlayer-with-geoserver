@@ -5,6 +5,8 @@ import { fromLonLat, transformExtent } from 'ol/proj';
 import OSM from 'ol/source/OSM';
 import { ZoomSlider } from 'ol/control'
 import { Tile, Vector } from 'ol/layer';
+import VectorImageLayer from 'ol/layer/VectorImage';
+import Text from 'ol/style/Text';
 import { Vector as vectorSource } from 'ol/source';
 import { TileWMS } from 'ol/source'
 import { HttpClient, HttpHeaders } from '@angular/common/http';
@@ -12,6 +14,8 @@ import GeoJSON from 'ol/format/GeoJSON';
 import Feature from 'ol/Feature';
 import * as echarts from 'echarts';
 import { ChartSeries } from './map-module.model';
+import Style from 'ol/style/Style';
+import Stroke from 'ol/style/Stroke';
 @Component({
     selector: 'app-map-module',
     templateUrl: './map-module.component.html',
@@ -27,7 +31,7 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
     public rasterLayer: any;
     public rasterSource: any;
     public vectorLayer: any;
-    public vectorSource: any;
+    public vectorLayerCountry: any;
     public chart: any = {};
     public chartData: Array<ChartSeries> = new Array<ChartSeries>();
     public dataModel = [{
@@ -75,8 +79,8 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
             target: 'map',
             view: new View({
                 projection: 'EPSG:3857',
-                zoom: 2,
-                center: fromLonLat([78.8718, 21.7679]),
+                zoom: 5,
+                center: fromLonLat([-73.4829, 40.84082]),
                 // extent: transformExtent([68.1766451354, 7.96553477623, 97.4025614766, 35.4940095078], "EPSG:4326", "EPSG:3857")
 
             }),
@@ -149,14 +153,32 @@ export class MapModuleComponent implements OnInit, AfterViewInit {
         })
     }
     addVectorLayer() {
-        this.vectorLayer = new Vector({
+        this.vectorLayer = new VectorImageLayer({
+            zIndex: 2,
             source: new vectorSource({
                 url: 'http://localhost:9004/geoserver/topp/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=topp:states&maxFeatures=50&outputFormat=application/json',
                 format: new GeoJSON()
             }),
 
         });
-        this.map.addLayer(this.vectorLayer)
+        // this.map.addLayer(this.vectorLayer)
+        this.vectorLayerCountry = new VectorImageLayer({
+            zIndex: 1,
+            source: new vectorSource({
+                url: 'http://localhost:9004/geoserver/US_Data/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=US_Data:USA_Country&maxFeatures=50&outputFormat=application/json',
+                format: new GeoJSON(),
+            }),
+            style: (feature) => {
+                return new Style({
+                    stroke: new Stroke({ color: 'black', width: 3 }),
+                    text: new Text({
+                        font: 'bold 20px "Fira Sans"',
+                        text: feature.getProperties()['NAME_ENGLI'].toString()
+                    })
+                })
+            }
+        });
+        this.map.addLayer(this.vectorLayerCountry)
     }
     initChart() {
         let chartEle = document.getElementById('chart');
