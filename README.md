@@ -2,7 +2,8 @@
 
 - Download this project and extract all the files to a specific folder.
 - This project uses angular version16.2.11.
-- After extracting files, open cmd and run npm install to install all required dependencies.
+- After extracting files, open cmd and run `npm install` to install all required dependencies.
+- All the geoserver layer,store,layer groups and style that are used in this project are stored inside `src/assets/` folder. You have to replace that folder to your geoserver data directory path.
 
 # Project
 
